@@ -27,15 +27,14 @@ function demoAnswer(messages = [], persona = 'nexus') {
 2. Ruta: dividirlo en una demo visual, una capa de datos y una automatizacion con IA.
 3. Valor: dejar botones utiles, historial, perfiles de agente y exportacion para que no sea solo una caja de texto.
 
-Modo demo activo: agrega OPENAI_API_KEY en Vercel para respuestas reales con OpenAI.`;
+Modo demo activo: agrega GEMINI_API_KEY en Vercel para respuestas reales con Gemini.`;
 }
 
-function toResponsesInput(messages) {
+function toGeminiContents(messages) {
   return messages.slice(-16).map((message) => ({
-    role: message.role === 'assistant' ? 'assistant' : 'user',
-    content: [
+    role: message.role === 'assistant' ? 'model' : 'user',
+    parts: [
       {
-        type: message.role === 'assistant' ? 'output_text' : 'input_text',
         text: String(message.content || ''),
       },
     ],
@@ -59,9 +58,9 @@ export default async function handler(req, res) {
   res.setHeader('Connection', 'keep-alive');
 
   const { messages = [], persona = 'nexus' } = req.body || {};
-  const model = process.env.AI_MODEL || 'gpt-5';
+  const model = process.env.AI_MODEL || 'gemini-2.5-flash';
 
-  if (!process.env.OPENAI_API_KEY) {
+  if (!process.env.GEMINI_API_KEY) {
     const text = demoAnswer(messages, persona);
     for (const token of text.match(/.{1,18}(\s|$)/g) || [text]) {
       writeEvent(res, 'delta', { text: token });
@@ -72,24 +71,26 @@ export default async function handler(req, res) {
   }
 
   try {
-    const upstream = await fetch('https://api.openai.com/v1/responses', {
+    const upstream = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse`,
+      {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        'x-goog-api-key': process.env.GEMINI_API_KEY,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model,
-        instructions: `${systemPrompt}\nModo activo: ${persona}.`,
-        input: toResponsesInput(messages),
-        stream: true,
+        systemInstruction: {
+          parts: [{ text: `${systemPrompt}\nModo activo: ${persona}.` }],
+        },
+        contents: toGeminiContents(messages),
       }),
     });
 
     if (!upstream.ok || !upstream.body) {
       const errorText = await upstream.text();
       writeEvent(res, 'error', {
-        message: `OpenAI respondio ${upstream.status}: ${errorText.slice(0, 400)}`,
+        message: `Gemini respondio ${upstream.status}: ${errorText.slice(0, 400)}`,
       });
       res.end();
       return;
@@ -103,36 +104,29 @@ export default async function handler(req, res) {
       const { done, value } = await reader.read();
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
-      const parts = buffer.split('\n\n');
+      const parts = buffer.split(/\r?\n\r?\n/);
       buffer = parts.pop() || '';
 
       for (const part of parts) {
-        const dataLine = part.split('\n').find((line) => line.startsWith('data: '));
+        const dataLine = part.split(/\r?\n/).find((line) => line.startsWith('data: '));
         if (!dataLine) continue;
         const raw = dataLine.slice(6).trim();
         if (raw === '[DONE]') continue;
 
         try {
           const event = JSON.parse(raw);
-          if (event.type === 'response.output_text.delta') {
-            writeEvent(res, 'delta', { text: event.delta || '' });
-          }
-          if (event.type === 'response.completed') {
-            writeEvent(res, 'done', { mode: 'openai', model });
-          }
-          if (event.type === 'response.failed') {
-            writeEvent(res, 'error', { message: event.response?.error?.message || 'La respuesta fallo.' });
-          }
+          const text = event.candidates?.[0]?.content?.parts?.map((part) => part.text || '').join('') || '';
+          if (text) writeEvent(res, 'delta', { text });
         } catch {
           // Ignore partial or non-JSON SSE frames.
         }
       }
     }
 
-    writeEvent(res, 'done', { mode: 'openai', model });
+    writeEvent(res, 'done', { mode: 'gemini', model });
     res.end();
   } catch (error) {
-    writeEvent(res, 'error', { message: error?.message || 'Error inesperado al llamar a OpenAI.' });
+    writeEvent(res, 'error', { message: error?.message || 'Error inesperado al llamar a Gemini.' });
     res.end();
   }
 }

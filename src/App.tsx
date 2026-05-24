@@ -189,7 +189,7 @@ function App() {
   useEffect(() => {
     fetch('/api/health')
       .then((res) => res.json())
-      .then((data) => setApiMode(data.mode === 'openai' ? `OpenAI ${data.model}` : 'Demo local'))
+      .then((data) => setApiMode(data.mode === 'gemini' ? `Gemini ${data.model}` : 'Demo local'))
       .catch(() => setApiMode('API desconectada'));
   }, []);
 

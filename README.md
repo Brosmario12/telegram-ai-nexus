@@ -3,7 +3,7 @@
 Interfaz web tipo Telegram para chatear con agentes de IA. Incluye:
 
 - Chat con streaming desde un backend local Express.
-- Modo demo si no hay `OPENAI_API_KEY`.
+- Modo demo si no hay `GEMINI_API_KEY`.
 - Canales/agentes: Nexus, Builder, Muse, Scout y Forge.
 - Historial persistente en `localStorage`.
 - Busqueda de chats, exportacion `.txt`, comandos rapidos y panel de contexto.
@@ -28,13 +28,13 @@ API:
 http://localhost:8787/api/health
 ```
 
-## Activar IA real
+## Activar IA real con Gemini
 
 No pegues claves en el frontend. Crea un archivo `.env` local:
 
 ```env
-OPENAI_API_KEY=sk-proj-tu-clave-rotada
-AI_MODEL=gpt-5
+GEMINI_API_KEY=AIza-tu-clave
+AI_MODEL=gemini-2.5-flash
 PORT=8787
 ```
 

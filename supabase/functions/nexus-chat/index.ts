@@ -24,15 +24,14 @@ function demoAnswer(messages = [], persona = "nexus") {
 2. Ruta: dividirlo en una demo visual, una capa de datos y una automatizacion con IA.
 3. Valor: dejar botones utiles, historial, perfiles de agente y exportacion para que no sea solo una caja de texto.
 
-Modo demo activo: agrega OPENAI_API_KEY como secret en Supabase para respuestas reales.`;
+Modo demo activo: agrega GEMINI_API_KEY como secret en Supabase para respuestas reales.`;
 }
 
-function toResponsesInput(messages) {
+function toGeminiContents(messages) {
   return messages.slice(-16).map((message) => ({
-    role: message.role === "assistant" ? "assistant" : "user",
-    content: [
+    role: message.role === "assistant" ? "model" : "user",
+    parts: [
       {
-        type: message.role === "assistant" ? "output_text" : "input_text",
         text: String(message.content || ""),
       },
     ],
@@ -49,8 +48,8 @@ Deno.serve(async (req) => {
   }
 
   const { messages = [], persona = "nexus" } = await req.json().catch(() => ({}));
-  const apiKey = Deno.env.get("OPENAI_API_KEY");
-  const model = Deno.env.get("AI_MODEL") || "gpt-5";
+  const apiKey = Deno.env.get("GEMINI_API_KEY");
+  const model = Deno.env.get("AI_MODEL") || "gemini-2.5-flash";
 
   if (!apiKey) {
     return Response.json(
@@ -62,25 +61,26 @@ Deno.serve(async (req) => {
     );
   }
 
-  const upstream = await fetch("https://api.openai.com/v1/responses", {
+  const upstream = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${apiKey}`,
+      "x-goog-api-key": apiKey,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model,
-      instructions: `${systemPrompt}\nModo activo: ${persona}.`,
-      input: toResponsesInput(messages),
+      systemInstruction: {
+        parts: [{ text: `${systemPrompt}\nModo activo: ${persona}.` }],
+      },
+      contents: toGeminiContents(messages),
     }),
   });
 
   const data = await upstream.json();
-  const text = data.output_text || data.output?.flatMap((item) => item.content || []).map((item) => item.text || "").join("") || "";
+  const text = data.candidates?.[0]?.content?.parts?.map((part) => part.text || "").join("") || data.error?.message || "";
 
   return Response.json(
     {
-      mode: "openai",
+      mode: "gemini",
       model,
       text,
     },
