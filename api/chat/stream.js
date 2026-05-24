@@ -43,6 +43,12 @@ function toResponsesInput(messages) {
 }
 
 export default async function handler(req, res) {
+  if (req.method === 'GET') {
+    res.writeHead(302, { Location: '/' });
+    res.end();
+    return;
+  }
+
   if (req.method !== 'POST') {
     res.status(405).json({ message: 'Method not allowed' });
     return;
