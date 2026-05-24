@@ -155,6 +155,7 @@ function App() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [apiMode, setApiMode] = useState('checking');
   const scrollRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
 
   const activeChat = chats.find((chat) => chat.id === activeId) || chats[0];
   const meta = personaMeta[activeChat.persona];
@@ -180,6 +181,10 @@ function App() {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [activeChat.messages]);
+
+  useEffect(() => {
+    composerRef.current?.focus();
+  }, [activeId]);
 
   useEffect(() => {
     fetch('/api/health')
@@ -476,9 +481,11 @@ function App() {
                 <Paperclip size={20} />
               </button>
               <textarea
+                ref={composerRef}
                 value={draft}
                 onChange={(event) => setDraft(event.target.value)}
                 onKeyDown={onDraftKeyDown}
+                aria-label="Mensaje para Nexus"
                 placeholder="Escribe a Nexus. Enter envia, Shift+Enter salta linea."
                 rows={1}
               />
