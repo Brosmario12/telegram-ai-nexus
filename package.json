@@ -1,0 +1,35 @@
+{
+  "name": "telegram-ai-nexus",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm:dev:web\" \"npm:dev:api\"",
+    "dev:web": "vite",
+    "dev:api": "node --watch server/index.mjs",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "start": "node server/index.mjs"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.9.1",
+    "@types/react": "^19.2.15",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "~6.0.2",
+    "vite": "^8.0.14"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "^6.0.2",
+    "concurrently": "^9.2.1",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "framer-motion": "^12.40.0",
+    "lucide-react": "^1.16.0",
+    "openai": "^6.39.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6"
+  }
+}
